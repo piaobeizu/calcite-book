@@ -1,4 +1,4 @@
-# Apache Calcite
+# 背景
 
-This file file serves as your book's preface, a great place to describe your book's content and ideas.
+Apache Calcite 是一种动态数据管理框架.
 
