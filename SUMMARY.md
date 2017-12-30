@@ -1,6 +1,5 @@
 # Summary
 
-* \[简介\] \(README.md\)
-
-
+* [Introduction](README.md)
+* [简介] (README.md)
 
