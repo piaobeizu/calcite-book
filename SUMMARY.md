@@ -9,7 +9,7 @@
 
 * [进阶](//charter2/README.md)
 
-* [适配器](/chapter2/section2.md)
+  * [适配器](/chapter2/section2.md)
 
 
 
