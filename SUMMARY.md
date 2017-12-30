@@ -5,7 +5,7 @@
 
   * [背景](/chapter1/chapter1.md)
 
-* * [/chapter1/chapter2.md](//chapter1/chapter2.md "指导")
+* * [指导](//chapter1/chapter2.md)
 
 
 
