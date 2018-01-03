@@ -38,5 +38,7 @@ statement.close();
 connection.close();
 ```
 
+看完这段代码，你可能会有疑惑：数据库相关的代码在哪里？传统意义上的数据库连接方式（比如jdbc连接，需要有配置信息等）在这段代码中完全没有体现出来。而真正的连接在 `ReflectiveSchema.create`创建了一个Java对象作为schema并且它的集合字段`emps`和`depts`作为表 之前一直是空的。
+
 
 
