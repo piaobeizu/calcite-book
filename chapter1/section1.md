@@ -16,13 +16,10 @@ public static class HrSchema {
 Class.forName("org.apache.calcite.jdbc.Driver");
 Properties info = new Properties();
 info.setProperty("lex", "JAVA");
-Connection connection =
-    DriverManager.getConnection("jdbc:calcite:", info);
-CalciteConnection calciteConnection =
-    connection.unwrap(CalciteConnection.class);
+Connection connection = DriverManager.getConnection("jdbc:calcite:", info);
+CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
 SchemaPlus rootSchema = calciteConnection.getRootSchema();
-Schema schema = ReflectiveSchema.create(calciteConnection,
-    rootSchema, "hr", new HrSchema());
+Schema schema = ReflectiveSchema.create(calciteConnection,rootSchema, "hr", new HrSchema());
 rootSchema.add("hr", schema);
 Statement statement = calciteConnection.createStatement();
 ResultSet resultSet = statement.executeQuery(
