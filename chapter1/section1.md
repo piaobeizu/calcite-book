@@ -39,9 +39,48 @@ connection.close();
 
 从这段代码中我们能够看出：Calcite的目的并不是拥有数据，甚至都没有独特的数据格式。上面的例子使用的是内存数据集，并且利用`linq4j`包来对数据做`groupBy`和`join`操作。Calcite也可以利用其他的数据格式来执行数据，例如是用JDBC。第一个例子中，我们可以做如下替换：
 
+将
+
 ```
 Schema schema = ReflectiveSchema.create(calciteConnection, rootSchema, "hr", new HrSchema());
 ```
+
+替换成：
+
+```
+Class.forName("com.mysql.jdbc.Driver");
+BasicDataSource dataSource = new BasicDataSource();
+dataSource.setUrl("jdbc:mysql://localhost");
+dataSource.setUsername("username");
+dataSource.setPassword("password");
+Schema schema = JdbcSchema.create(rootSchema, "hr", dataSource, null, "name");
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
