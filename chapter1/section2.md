@@ -24,7 +24,23 @@ CSV还可以作为构建适配器到其他数据格式的模板。尽管没有�
 
 ### 下载安装
 
-**环境准备：** java版本\(1.7或更高，最好1.8），git和maven（3.2.1或更高）
+##### **环境准备：** java版本\(1.7或更高，最好1.8），git和maven（3.2.1或更高）
+
+```
+$ git clone https://github.com/apache/calcite.git
+$ cd calcite
+$ mvn install -DskipTests -Dcheckstyle.skip=true
+$ cd example/csv
+```
+
+### 开始：
+
+现在我们需要用到sqline来连接Calcite，这个工程里面包含了`SQL shell`脚本.
+
+```
+$ ./sqlline
+sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
+```
 
 
 
