@@ -39,6 +39,11 @@ $ cd example/csv
 
 ```
 $ ./sqlline
+```
+
+执行这个命令后：![](/assets/WechatIMG13.jpeg)
+
+```
 sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
 ```
 
