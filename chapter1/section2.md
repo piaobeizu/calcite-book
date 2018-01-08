@@ -41,11 +41,81 @@ $ cd example/csv
 $ ./sqlline
 ```
 
-执行这个命令后：![](/assets/WechatIMG13.jpeg)继续执行如下命令：
+执行这个命令后：
+
+```
+[INFO] 
+[INFO] Calcite ............................................ SUCCESS [  1.003 s]
+[INFO] Calcite Linq4j ..................................... SUCCESS [  0.021 s]
+[INFO] Calcite Core ....................................... SUCCESS [  0.213 s]
+[INFO] Calcite Cassandra .................................. SUCCESS [  0.136 s]
+[INFO] Calcite Druid ...................................... SUCCESS [  0.061 s]
+[INFO] Calcite Elasticsearch .............................. SUCCESS [  0.237 s]
+[INFO] Calcite Elasticsearch5 ............................. SUCCESS [  0.269 s]
+[INFO] Calcite Examples ................................... SUCCESS [  0.006 s]
+[INFO] Calcite Example CSV ................................ SUCCESS [  0.099 s]
+[INFO] Calcite Example Function ........................... SUCCESS [  0.019 s]
+[INFO] Calcite File ....................................... SUCCESS [  0.090 s]
+[INFO] Calcite MongoDB .................................... SUCCESS [  0.020 s]
+[INFO] Calcite Pig ........................................ SUCCESS [  0.370 s]
+[INFO] Calcite Piglet ..................................... SUCCESS [  0.011 s]
+[INFO] Calcite Plus ....................................... SUCCESS [  0.115 s]
+[INFO] Calcite Server ..................................... SUCCESS [  0.020 s]
+[INFO] Calcite Spark ...................................... SUCCESS [  0.242 s]
+[INFO] Calcite Splunk ..................................... SUCCESS [  0.014 s]
+[INFO] Calcite Ubenchmark ................................. SUCCESS [  0.029 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 3.785 s
+[INFO] Finished at: 2018-01-08T22:27:32+08:00
+[INFO] Final Memory: 36M/359M
+[INFO] ------------------------------------------------------------------------
+sqlline version 1.3.0
+sqlline> 
+```
+
+继续执行如下命令：
 
 ```
 sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
 ```
+
+
+
+（注意：sqlline的）
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
