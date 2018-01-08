@@ -72,7 +72,7 @@ $ ./sqlline
 [INFO] Final Memory: 36M/359M
 [INFO] ------------------------------------------------------------------------
 sqlline version 1.3.0
-sqlline> 
+sqlline>
 ```
 
 继续执行如下命令：
@@ -81,41 +81,7 @@ sqlline>
 sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
 ```
 
-
+（windows下请执行sqlline.bat命令）
 
 （注意：sqlline的）
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
