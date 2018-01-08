@@ -41,7 +41,7 @@ $ cd example/csv
 $ ./sqlline
 ```
 
-执行这个命令后：![](/assets/WechatIMG13.jpeg)
+执行这个命令后：![](/assets/WechatIMG13.jpeg)继续执行如下命令：
 
 ```
 sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
