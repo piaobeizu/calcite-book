@@ -86,17 +86,60 @@ sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
 执行元数据查询：
 
 ```
-sqlline> !tables
-+------------+--------------+-------------+---------------+----------+------+
-| TABLE_CAT  | TABLE_SCHEM  | TABLE_NAME  |  TABLE_TYPE   | REMARKS  | TYPE |
-+------------+--------------+-------------+---------------+----------+------+
-| null       | SALES        | DEPTS       | TABLE         | null     | null |
-| null       | SALES        | EMPS        | TABLE         | null     | null |
-| null       | SALES        | HOBBIES     | TABLE         | null     | null |
-| null       | metadata     | COLUMNS     | SYSTEM_TABLE  | null     | null |
-| null       | metadata     | TABLES      | SYSTEM_TABLE  | null     | null |
-+------------+--------------+-------------+---------------+----------+------+
+0: jdbc:calcite:model=target/test-classes/mod> !tables
++-----------+-------------+------------+------------+---------+----------+------------+-----------+---------------------------+----------------+
+| TABLE_CAT | TABLE_SCHEM | TABLE_NAME | TABLE_TYPE | REMARKS | TYPE_CAT | TYPE_SCHEM | TYPE_NAME | SELF_REFERENCING_COL_NAME | REF_GENERATION |
++-----------+-------------+------------+------------+---------+----------+------------+-----------+---------------------------+----------------+
+|           | SALES       | DEPTS      | TABLE      |         |          |            |           |                           |                |
+|           | SALES       | EMPS       | TABLE      |         |          |            |           |                           |                |
+|           | metadata    | COLUMNS    | SYSTEM_TABLE |         |          |            |           |                           |                |
+|           | metadata    | TABLES     | SYSTEM_TABLE |         |          |            |           |                           |                |
++-----------+-------------+------------+------------+---------+----------+------------+-----------+---------------------------+----------------+
 ```
 
 （温馨提示：在执行sqline的`!tables`命令后，后台执行了[`DatabaseMetaData.getTables()`](http://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html#getTables%28java.lang.String, java.lang.String, java.lang.String, java.lang.String[]%29)。相同的元数据查询命令有`!columns`和`!describe`）
+
+你现在能够看到在这个系统中有5个表：`EMPS`，`DEPTS`在当前的`SALES` schema中，并且`COLUMNS`和`TABLES`是在系统`metadata`的schema中。系统表始终存在于Calcite中，但是其他表都是由特定的schema的实现来生成；例如：`EMPS`和`DEPTS`表是基于`target/test-classes`下的`EMPS.CSV`和`DEPTS.csv`文件来生成的。
+
+让我们在这些表的基础上做些查询操作来展示Calcite是怎样提供完整的SQL查询的实现。先来扫描一张表：
+
+```
+0: jdbc:calcite:model=target/test-classes/mod> select * from emps;
++-------+------+--------+--------+------+-------+-----+---------+---------+----------+
+| EMPNO | NAME | DEPTNO | GENDER | CITY | EMPID | AGE | SLACKER | MANAGER | JOINEDAT |
++-------+------+--------+--------+------+-------+-----+---------+---------+----------+
+| 100   | Fred | 10     |        |      | 30    | 25  | true    | false   | 1996-08-03 |
+| 110   | Eric | 20     | M      | San Francisco | 3     | 80  |         | false   | 2001-01-01 |
+| 110   | John | 40     | M      | Vancouver | 2     | null | false   | true    | 2002-05-03 |
+| 120   | Wilma | 20     | F      |      | 1     | 5   |         | true    | 2005-09-07 |
+| 130   | Alice | 40     | F      | Vancouver | 2     | null | false   | true    | 2007-01-01 |
++-------+------+--------+--------+------+-------+-----+---------+---------+----------+
+```
+
+加入 JION 和 GROUP BY：
+
+```
+0: jdbc:calcite:model=target/test-classes/mod>  SELECT d.name, COUNT(*)
+. . . . . . . . . . . . . . . . . . . . . . .> FROM emps AS e JOIN depts AS d ON e.deptno = d.deptno
+. . . . . . . . . . . . . . . . . . . . . . .> GROUP BY d.name;
++------+---------------------+
+| NAME |       EXPR$1        |
++------+---------------------+
+| Sales | 1                   |
+| Marketing | 2               |
++------+---------------------+|
+```
+
+最后，VALUES操作能够生成单独的一行，这是一种非常方便的方式来测试表达式和内置的SQL函数：
+
+```
+0: jdbc:calcite:model=target/test-classes/mod> VALUES CHAR_LENGTH('Hello, ' || 'world!');
++------------+
+|   EXPR$0   |
++------------+
+| 13         |
++------------+
+```
+
+Calcite有很多种其他的SQL特征。我们不需要完整的介绍他们。你们可以写一些查询来测试。
 
