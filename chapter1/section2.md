@@ -143,5 +143,9 @@ sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
 
 Calcite有很多种其他的SQL特征。我们不需要完整的介绍他们。你们可以写一些查询来测试。
 
+### 模式发现
+
+
+
 
 
