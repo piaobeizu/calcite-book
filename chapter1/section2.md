@@ -83,5 +83,20 @@ sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
 
 （windows下请执行sqlline.bat命令）
 
-（注意：sqlline的）
+执行元数据查询：
+
+```
+sqlline> !tables
++------------+--------------+-------------+---------------+----------+------+
+| TABLE_CAT  | TABLE_SCHEM  | TABLE_NAME  |  TABLE_TYPE   | REMARKS  | TYPE |
++------------+--------------+-------------+---------------+----------+------+
+| null       | SALES        | DEPTS       | TABLE         | null     | null |
+| null       | SALES        | EMPS        | TABLE         | null     | null |
+| null       | SALES        | HOBBIES     | TABLE         | null     | null |
+| null       | metadata     | COLUMNS     | SYSTEM_TABLE  | null     | null |
+| null       | metadata     | TABLES      | SYSTEM_TABLE  | null     | null |
++------------+--------------+-------------+---------------+----------+------+
+```
+
+（温馨提示：在执行sqline的`!tables`命令后，后台执行了[`DatabaseMetaData.getTables()`](http://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html#getTables%28java.lang.String, java.lang.String, java.lang.String, java.lang.String[]%29)。相同的元数据查询命令有`!columns`和`!describe`）
 
