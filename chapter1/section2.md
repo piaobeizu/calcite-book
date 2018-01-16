@@ -145,5 +145,28 @@ Calcite有很多种其他的SQL特征。我们不需要完整的介绍他们。�
 
 ### 模式发现
 
-现在，你一定会疑惑：Calcite是怎么找到这些表的？请记住：Calcite的核心并不知道关于CSV文件的任何信息。
+现在，你一定会疑惑：Calcite是怎么找到这些表的？请记住：Calcite并不关心也不会获取CSV文件的任何信息。（你可以讲Calcite理解成是一个不包含存储层的数据库，它不需要关心任何文件格式）Calcite之所以能获取到这些表是因为我们执行了 calcite-example-csv 项目中的代码。
+
+整个执行链条中有很多步骤。首先，我们基于在model文件中定义的schema工厂类定义了一个schema；然后，schema工厂创建了一个schema，并且这个schema创建了多张表，每张表都清楚怎样扫描csv文件来获取数据；最后，Calcite解析了查询语句并且创建了执行计划来使用这些表，在执行查询时，Calcite利用表来读取数据。让我们来更详细的了解这些步骤的细节。
+
+在JDBC连接字符串上，我们给出了JSON格式的模型路径。模型如下：
+
+```
+{
+  version: '1.0',
+  defaultSchema: 'SALES',
+  schemas: [
+    {
+      name: 'SALES',
+      type: 'custom',
+      factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',
+      operand: {
+        directory: 'sales'
+      }
+    }
+  ]
+}
+```
+
+
 
