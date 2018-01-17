@@ -193,5 +193,7 @@ public Schema create(SchemaPlus parentSchema, String name,
 
 在该模型的驱动下，模式工厂实例化一个名为“SALES”的模式。该模式是[org.apache.calcite.adapter.csv.CsvSchema](https://github.com/apache/calcite/blob/master/example/csv/src/main/java/org/apache/calcite/adapter/csv/CsvSchema.java)的一个实例，并实现了Calcite接口[Schema](http://calcite.apache.org/apidocs/org/apache/calcite/schema/Schema.html)。
 
-schame的工作室提供一系列的表。（它也可以列出sub-schema和表函数，但是还有很多先进的特性只是calcite-example-csv案例没有支持而已）。这些表实现了calcite的 [Table](http://calcite.apache.org/apidocs/org/apache/calcite/schema/Table.html) 接口
+schame的工作是提供一系列的表。（它也可以列出sub-schema和表函数，但是还有很多先进的特性只是calcite-example-csv案例没有支持而已）。这些表实现了calcite的 [Table](http://calcite.apache.org/apidocs/org/apache/calcite/schema/Table.html) 接口。`CsvSchema`生成 [CsvTable](https://github.com/apache/calcite/blob/master/example/csv/src/main/java/org/apache/calcite/adapter/csv/CsvTable.java)及其子类的实例的表。
+
+这是来自`CsvSchema`的相关代码，覆盖了AbstractSchema基类中的[`getTableMap()`](http://calcite.apache.org/apidocs/org/apache/calcite/schema/impl/AbstractSchema.html#getTableMap%28%29)方法。
 
