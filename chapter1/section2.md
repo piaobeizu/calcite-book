@@ -168,5 +168,30 @@ Calcite有很多种其他的SQL特征。我们不需要完整的介绍他们。�
 }
 ```
 
+上面的模型定义了一个叫做"SALES"的单模式。这个schema是由[org.apache.calcite.adapter.csv.CsvSchemaFactory](https://github.com/apache/calcite/blob/master/example/csv/src/main/java/org/apache/calcite/adapter/csv/CsvSchemaFactory.java)插件类所提供，这个插件类是calcite-example-csv项目的一部分并且实现了[SchemaFactory](http://calcite.apache.org/apidocs/org/apache/calcite/schema/SchemaFactory.html) 接口。它的create方法实例化一个模式，从模型文件传入目录参数:
 
+```
+public Schema create(SchemaPlus parentSchema, String name,
+                     Map<String, Object> operand) {
+    final String directory = (String) operand.get("directory");
+    final File base =
+            (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
+    File directoryFile = new File(directory);
+    if (base != null && !directoryFile.isAbsolute()) {
+        directoryFile = new File(base, directory);
+    }
+    String flavorName = (String) operand.get("flavor");
+    CsvTable.Flavor flavor;
+    if (flavorName == null) {
+        flavor = CsvTable.Flavor.SCANNABLE;
+    } else {
+        flavor = CsvTable.Flavor.valueOf(flavorName.toUpperCase());
+    }
+    return new CsvSchema(directoryFile, flavor);
+}
+```
+
+在该模型的驱动下，模式工厂实例化一个名为“SALES”的模式。该模式是[org.apache.calcite.adapter.csv.CsvSchema](https://github.com/apache/calcite/blob/master/example/csv/src/main/java/org/apache/calcite/adapter/csv/CsvSchema.java)的一个实例，并实现了Calcite接口[Schema](http://calcite.apache.org/apidocs/org/apache/calcite/schema/Schema.html)。
+
+schame的工作室提供一系列的表。（它也可以列出sub-schema和表函数，但是还有很多先进的特性只是calcite-example-csv案例没有支持而已）。这些表实现了calcite的 [Table](http://calcite.apache.org/apidocs/org/apache/calcite/schema/Table.html) 接口
 
