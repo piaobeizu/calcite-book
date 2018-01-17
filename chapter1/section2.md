@@ -249,5 +249,67 @@ private Table createTable(File file) {
 }
 ```
 
+schema扫描模型文件中定义的目录并且根据以.csv结尾的文件创建对应的表。在这个例子中，目录是`target/test-classes/sales` 并且包含`EMPS.csv`和`DEPTS.csv`，根据这两个csv文件最终生成了`EMPS`表和`DEPTS`表。
+
+### schemas中的Tables和views
+
+你应该关注到：我们怎样做到不需要在模型中定义任何表，但是schema却自动的创建了这些表。你可以使用schema的`tables`属性来定义除了自动创建的表以外的额外表。
+
+我们来看看怎样创建一个重要并且有用的表格类型，即视图。
+
+当你编写一个查询语句的时候视图看起来像一张表，但是它不存储数据。它会执行查询语句生成查询结果。当查询被计划时，视图被展开。因此，查询计划通常会执行优化，比如从SELECT子句中删除最终结果中没有使用的表达式。
+
+下面是定义了一个视图的schema：
+
+```
+{
+  version: '1.0',
+  defaultSchema: 'SALES',
+  schemas: [
+    {
+      name: 'SALES',
+      type: 'custom',
+      factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',
+      operand: {
+        directory: 'target/test-classes/sales'
+      },
+      tables: [
+        {
+          name: 'FEMALE_EMPS',
+          type: 'view',
+          sql: 'SELECT * FROM emps WHERE gender = \'F\''
+        }
+      ]
+    }
+  ]
+}
+```
+
+`type: 'view'` 这一行使用`FEMALE_EMPS`标记了一个视图，而不是常规表格或自定义表格。请注意，视图定义中的单引号会以JSON的正常方式使用反斜杠进行转义。
+
+JSON中通常不会有太长的字符串，因此Calcite支持另一种语法。如果你的视图有一个很长的SQL语句，你可以将它拆成几行而不是一个完整的字符串：
+
+```
+{
+  name: 'FEMALE_EMPS',
+  type: 'view',
+  sql: [
+    'SELECT * FROM emps',
+    'WHERE gender = \'F\''
+  ]
+}
+```
+
+现在我们已经定义了一个视图，我们可以在查询中使用它，就像是定义了一张表一样：
+
+```
+sqlline> SELECT e.name, d.name FROM female_emps AS e JOIN depts AS d on e.deptno = d.deptno;
++--------+------------+
+|  NAME  |    NAME    |
++--------+------------+
+| Wilma  | Marketing  |
++--------+------------+
+```
+
 
 
