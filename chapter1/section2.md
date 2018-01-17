@@ -197,3 +197,57 @@ schame的工作是提供一系列的表。（它也可以列出sub-schema和表�
 
 这是来自`CsvSchema`的相关代码，覆盖了AbstractSchema基类中的[`getTableMap()`](http://calcite.apache.org/apidocs/org/apache/calcite/schema/impl/AbstractSchema.html#getTableMap%28%29)方法。
 
+```
+@Override
+protected Map<String, Table> getTableMap() {
+    // Look for files in the directory ending in ".csv", ".csv.gz", ".json",
+    // ".json.gz".
+    File[] files = directoryFile.listFiles(
+            new FilenameFilter() {
+                public boolean accept(File dir, String name) {
+                    final String nameSansGz = trim(name, ".gz");
+                    return nameSansGz.endsWith(".csv")
+                            || nameSansGz.endsWith(".json");
+                }
+            });
+    if (files == null) {
+        System.out.println("directory " + directoryFile + " not found");
+        files = new File[0];
+    }
+    // Build a map from table name to table; each file becomes a table.
+    final ImmutableMap.Builder<String, Table> builder = ImmutableMap.builder();
+    for (File file : files) {
+        String tableName = trim(file.getName(), ".gz");
+        final String tableNameSansJson = trimOrNull(tableName, ".json");
+        if (tableNameSansJson != null) {
+            JsonTable table = new JsonTable(file);
+            builder.put(tableNameSansJson, table);
+            continue;
+        }
+        tableName = trim(tableName, ".csv");
+
+        final Table table = createTable(file);
+        builder.put(tableName, table);
+    }
+    return builder.build();
+}
+
+/**
+ * Creates different sub-type of table based on the "flavor" attribute.
+ */
+private Table createTable(File file) {
+    switch (flavor) {
+        case TRANSLATABLE:
+            return new CsvTranslatableTable(file, null);
+        case SCANNABLE:
+            return new CsvScannableTable(file, null);
+        case FILTERABLE:
+            return new CsvFilterableTable(file, null);
+        default:
+            throw new AssertionError("Unknown flavor " + flavor);
+    }
+}
+```
+
+
+
