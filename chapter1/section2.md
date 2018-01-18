@@ -313,3 +313,5 @@ sqlline> SELECT e.name, d.name FROM female_emps AS e JOIN depts AS d on e.deptno
 
 
 
+
+
