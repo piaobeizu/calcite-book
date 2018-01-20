@@ -271,7 +271,8 @@ schema扫描模型文件中定义的目录并且根据以.csv结尾的文件创�
       type: 'custom',
       factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',
       operand: {
-        directory: 'sales'
+        directory: 'sales' //注意：源代码中这个路径写成了 target/test-classes/sales，
+                           //但是经过测试这个路径是错误的，这个路径笔者认为是相对于这个模型文件的路径
       },
       tables: [
         {
