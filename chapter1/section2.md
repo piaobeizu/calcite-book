@@ -271,7 +271,7 @@ schema扫描模型文件中定义的目录并且根据以.csv结尾的文件创�
       type: 'custom',
       factory: 'org.apache.calcite.adapter.csv.CsvSchemaFactory',
       operand: {
-        directory: 'target/test-classes/sales'
+        directory: 'sales'
       },
       tables: [
         {
@@ -310,8 +310,6 @@ sqlline> SELECT e.name, d.name FROM female_emps AS e JOIN depts AS d on e.deptno
 | Wilma  | Marketing  |
 +--------+------------+
 ```
-
-
 
 
 
