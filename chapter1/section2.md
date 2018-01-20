@@ -304,13 +304,78 @@ JSON中通常不会有太长的字符串，因此Calcite支持另一种语法。
 现在我们已经定义了一个视图，我们可以在查询中使用它，就像是定义了一张表一样：
 
 ```
-sqlline> SELECT e.name, d.name FROM female_emps AS e JOIN depts AS d on e.deptno = d.deptno;
-+--------+------------+
-|  NAME  |    NAME    |
-+--------+------------+
-| Wilma  | Marketing  |
-+--------+------------+
+0: jdbc:calcite:model=target/test-classes/mod> SELECT e.name, d.name FROM female_emps AS e JOIN depts AS d on e.deptno = d.deptno;
++------+------+
+| NAME | NAME |
++------+------+
+| Wilma | Marketing |
++------+------+
+
 ```
+
+### 自定义表
+
+自定义表由用户自定义的代码来实现。这些表不需要存在于自定义的schema。下面是一个自定义的模型文件：
+
+```
+{
+  version: '1.0',
+  defaultSchema: 'CUSTOM_TABLE',
+  schemas: [
+    {
+      name: 'CUSTOM_TABLE',
+      tables: [
+        {
+          name: 'EMPS',
+          type: 'custom',
+          factory: 'org.apache.calcite.adapter.csv.CsvTableFactory',
+          operand: {
+            file: 'sales/EMPS.csv.gz',
+            flavor: "scannable"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+我们做个简单的查询：
+
+```
+1: jdbc:calcite:model=target/test-classes/mod> SELECT empno, name FROM custom_table.emps;
++-------+------+
+| EMPNO | NAME |
++-------+------+
+| 100   | Fred |
+| 110   | Eric |
+| 110   | John |
+| 120   | Wilma |
+| 130   | Alice |
++-------+------+
+```
+
+这是一个常规的schema，并且包含了一个由[org.apache.calcite.adapter.csv.CsvTableFactory](https://github.com/apache/calcite/blob/master/example/csv/src/main/java/org/apache/calcite/adapter/csv/CsvTableFactory.java)支持的自定义表，它实现了Calcite的接口[TableFactory](http://calcite.apache.org/apidocs/org/apache/calcite/schema/TableFactory.html) ，它的`create`方法实例化一个`CsvScannableTable`，传入来自模型文件的`file`参数：
+
+```
+public CsvTable create(SchemaPlus schema, String name,
+                       Map<String, Object> operand, RelDataType rowType) {
+    String fileName = (String) operand.get("file");
+    File file = new File(fileName);
+    final File base =
+            (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
+    if (base != null && !file.isAbsolute()) {
+        file = new File(base, fileName);
+    }
+    final RelProtoDataType protoRowType =
+            rowType != null ? RelDataTypeImpl.proto(rowType) : null;
+    return new CsvScannableTable(file, protoRowType);
+}
+```
+
+实现自定义表通常是实现自定义模式的更简单的替代方法。两种方法可能最后都创建了一个相似的Tbale接口的实现，但是，对于自定义表来说，你不需要实现元数据的发现。`CsvTableFactory`创建了一个`CsvScannableTable`，就像`CsvSchema`一样，但是表的实现过程中没有扫描文件系统去找`csv`文件。
+
+自定义表需要model编写人员做更多的工作（编写人员需要明确指定每个表格及其文件），但是相对的，编写人员也就有了更大的自主权，比如给每个表都提供不同的参数。
 
 
 
