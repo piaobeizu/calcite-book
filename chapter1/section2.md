@@ -377,6 +377,3 @@ public CsvTable create(SchemaPlus schema, String name,
 
 自定义表需要model编写人员做更多的工作（编写人员需要明确指定每个表格及其文件），但是相对的，编写人员也就有了更大的自主权，比如给每个表都提供不同的参数。
 
-
-
-
