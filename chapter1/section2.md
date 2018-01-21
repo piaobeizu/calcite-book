@@ -1,3 +1,5 @@
+
+
 # 快速入门
 
 本章主要介绍一个简单的CSV适配器如何一步一步的创建和连接到Calcite。这个适配器能够将一个目录下面的csv文件表现成一个包含各种表的schema。Calcite已经实现了rest接口，也提供了一套完整的SQL接口。
@@ -377,4 +379,215 @@ public CsvTable create(SchemaPlus schema, String name,
 
 自定义表需要model编写人员做更多的工作（编写人员需要明确指定每个表格及其文件），但是相对的，编写人员也就有了更大的自主权，比如给每个表都提供不同的参数。
 
+### 模型中的注释
 
+模型文件中能够使用 `/* … */`和 `//` 语法来添加注释（注释不是标准的json规范，但是非常有好处）
+
+```
+{
+  version: '1.0',
+  /* Multi-line
+     comment. */
+  defaultSchema: 'CUSTOM_TABLE',
+  // Single-line comment.
+  schemas: [
+    ..
+  ]
+}
+```
+
+### 执行计划优化查询
+
+到目前为止，只要表中没有大量的数据，我们看到表的实现就没有什么问题。但是，如果你的自定义的表有上百列和上百万行的数据，你宁愿系统没有在每次查询的时候检索所有的数据。你希望Calcite与适配器进行协商并找到访问数据的更有效的方法。
+
+这种协商是查询优化的一种简单的方式。Calcite支持通过添加查询计划规则来优化查询。优化器规则通过在查询分析树中查找模式来操作，并用已经实现的实现优化的新的一组节点来替换书中的匹配节点。
+
+优化规则和schema和tables一样也是可以扩展的。因此，如果你想用SQL去访问数据，你首先需要定义一个表或者schema，然后你需要定义一些规则来使这些访问更加高效。
+
+为了证明这一点，我们现在使用一个查询规则去访问一个CSV文件中的一部分列。针对两个相似的schema我们执行同样的查询：
+
+```
+sqlline> !connect jdbc:calcite:model=target/test-classes/model.json admin admin
+0: jdbc:calcite:model=target/test-classes/mod> explain plan for select name from emps;
++------+
+| PLAN |
++------+
+| EnumerableCalc(expr#0..9=[{inputs}], NAME=[$t1])
+  EnumerableInterpreter
+    BindableTableScan(table=[[SALES, EMPS]])
+ |
++------+
+1 row selected (0.432 seconds)
+0: jdbc:calcite:model=target/test-classes/mod>  !connect jdbc:calcite:model=target/test-classes/smart.json admin admin
+1: jdbc:calcite:model=target/test-classes/sma> explain plan for select name from emps;
++------+
+| PLAN |
++------+
+| CsvTableScan(table=[[SALES, EMPS]], fields=[[1]])
+ |
++------+
+```
+
+很明显，这两个plan不同。为什么呢？让我们来看看`smart.json`模型文件，这个文件中有这么一行：
+
+```
+flavor: "TRANSLATABLE"
+```
+
+这一行会导致创建一个`CsvSchema`，并且他的`createTable`方法创建的是[CsvTranslatableTable](https://github.com/apache/calcite/blob/master/example/csv/src/main/java/org/apache/calcite/adapter/csv/CsvTranslatableTable.java)而不是`CsvScannableTable`。
+
+`CsvTranslatableTable`实现了[TranslatableTable.toRel()](http://calcite.apache.org/apidocs/org/apache/calcite/schema/TranslatableTable.html#toRel())方法来创建[CsvTableScan](https://github.com/apache/calcite/blob/master/example/csv/src/main/java/org/apache/calcite/adapter/csv/CsvTableScan.java)。扫描表其实是扫描运算符树的叶子。通常的实现是[EnumerableTableScan](http://calcite.apache.org/apidocs/org/apache/calcite/adapter/enumerable/EnumerableTableScan.html)，但是我们已经创建了一个独特的子类型来引发规则的触发.
+
+下面是整个的规则：
+
+```
+public class CsvProjectTableScanRule extends RelOptRule {
+    public static final CsvProjectTableScanRule INSTANCE =
+            new CsvProjectTableScanRule();
+
+    private CsvProjectTableScanRule() {
+        super(
+                operand(LogicalProject.class,
+                        operand(CsvTableScan.class, none())),
+                "CsvProjectTableScanRule");
+    }
+
+    @Override
+    public void onMatch(RelOptRuleCall call) {
+        final LogicalProject project = call.rel(0);
+        final CsvTableScan scan = call.rel(1);
+        int[] fields = getProjectFields(project.getProjects());
+        if (fields == null) {
+            // Project contains expressions more complex than just field references.
+            return;
+        }
+        call.transformTo(
+                new CsvTableScan(
+                        scan.getCluster(),
+                        scan.getTable(),
+                        scan.csvTable,
+                        fields));
+    }
+
+    private int[] getProjectFields(List<RexNode> exps) {
+        final int[] fields = new int[exps.size()];
+        for (int i = 0; i < exps.size(); i++) {
+            final RexNode exp = exps.get(i);
+            if (exp instanceof RexInputRef) {
+                fields[i] = ((RexInputRef) exp).getIndex();
+            } else {
+                return null; // not a simple projection
+            }
+        }
+        return fields;
+    }
+}
+```
+
+构造函数声明了能够触发规则的关联表达式的模式。`onMatch`方法生成了一个新的关联表达式并调用[`RelOptRuleCall.transformTo()`](http://calcite.apache.org/apidocs/org/apache/calcite/plan/RelOptRuleCall.html#transformTo(org.apache.calcite.rel.RelNode))方法来标明规则被成功触发。
+
+### 查询优化过程
+
+Calcite的查询计划非常巧妙，但是这里我们先不做介绍。
+
+首先，Calcite并没有按照规定的顺序去触发规则。查询优化过程会尝试分支树中的很多分支，就像国际象棋程序中会测试众多的走法一样。如果规则A和规则B都符合查询运算符树中的给定部分，Calcite会同时触发他们。
+
+ 然后，Calcite会使用"成本"来筛选计划，但是，成本模型并不会阻止Calcite去选择在短期内看起来更成本更昂贵的规则。
+
+很多优化器都会有一个线性优化方案。在面对选择规则A或者规则B时，如上所述，这样的优化器需要立即选择。一般的优化器可能会有这样的策略，例如"将规则A应用于整棵树，然后将规则B应用于整棵树"，或者基于成本的策略，使用成本更便宜的结果的规则。
+
+其实这些做法是一种妥协，但是Calcite并没有这么做，这使得组合各种规则变得简单。如果你想要将规则组合在一起以识别具有规则的物化视图从而能够从csv或者jdbc源系统中读取数据的话，你只需要将Calcite设置为所有规则的集合并告知她即可。
+
+Calcite使用了一个成本模型。这个成本模型决定哪个计划最终得到执行，并且有时候会对搜索树进行剪纸操作以防止搜索空间爆炸，但是它不会强制你在规则A还是B之间做出选择。这个非常重要，因为这能避免实际上并不是最佳的搜索空间中陷入局部极小值。
+
+这个成本模型也是"可插拔"的，就像它基于的表和查询运算符统计一样。这个会在后面讲到。
+
+### JDBC适配器
+
+JDBC适配器将JDBC数据源中的schema映射为Calcite schema。下面是一个从MySQL "foodmart"数据库中读取数据的schema的例子：
+
+```
+{
+  version: '1.0',
+  defaultSchema: 'foodmart',
+  schemas: [
+    {
+      type: 'jdbc',
+      name: 'foodmart',
+      jdbcUser: 'foodmart',
+      jdbcPassword: 'foodmart',
+      jdbcUrl: 'jdbc:mysql://localhost',
+      jdbcCatalog: 'foodmart',
+      jdbcSchema: null
+    }
+  ]
+}
+```
+
+（因为这是Mondrian的主要测试数据集，所以使用Mondrian OLAP引擎的用户将熟悉FoodMart数据库。要加载数据集，请按照Mondrian的安装说明进行操作。）
+
+**目前的限制：**JDBC适配器目前只能下推表扫描的操作；所有的其他的操作（过滤，链接，聚合等等）都没有发生在Calcite中。我们的目标是将尽可能多的操作压缩到源系统中，随时随地的翻译语法、数据类型和内置函数。如果Calcite查询是建立在单一的JDBC数据库中的表上，原则上整个查询应该都转到数据库中执行。如果数据表是来自于多个JDBC源，或者是JDBC和非JDBC的混合源，Calcite将使用最有效的分布式查询方法。
+
+### 克隆JDBC适配器
+
+克隆的JDBC适配器将创建一个混合的数据库。这些数据是来自于JDBC数据库，但是每张表第一次被访问时，会被读进内存中。Calcite会基于这些内存表来进行评估查询，实际上是数据库的缓存。
+
+下面的模型从MySQL中的"foodmart"库中读取表：
+
+```
+{
+  version: '1.0',
+  defaultSchema: 'FOODMART_CLONE',
+  schemas: [
+    {
+      name: 'FOODMART_CLONE',
+      type: 'custom',
+      factory: 'org.apache.calcite.adapter.clone.CloneSchema$Factory',
+      operand: {
+        jdbcDriver: 'com.mysql.jdbc.Driver',
+        jdbcUrl: 'jdbc:mysql://localhost/foodmart',
+        jdbcUser: 'foodmart',
+        jdbcPassword: 'foodmart'
+      }
+    }
+  ]
+}
+```
+
+另一种技术是在现有的schema之上构建一个克隆模型。你可以使用source属性来引用模型中早先定义的schema，就像下面的例子：
+
+```
+{
+  version: '1.0',
+  defaultSchema: 'FOODMART_CLONE',
+  schemas: [
+    {
+      name: 'FOODMART',
+      type: 'custom',
+      factory: 'org.apache.calcite.adapter.jdbc.JdbcSchema$Factory',
+      operand: {
+        jdbcDriver: 'com.mysql.jdbc.Driver',
+        jdbcUrl: 'jdbc:mysql://localhost/foodmart',
+        jdbcUser: 'foodmart',
+        jdbcPassword: 'foodmart'
+      }
+    },
+    {
+      name: 'FOODMART_CLONE',
+      type: 'custom',
+      factory: 'org.apache.calcite.adapter.clone.CloneSchema$Factory',
+      operand: {
+        source: 'FOODMART'
+      }
+    }
+  ]
+}
+```
+
+你可以使用这种方式基于任何类型的schema创建一个克隆的schema，不仅仅是JDBC。
+
+目前的系统中克隆的适配器功能不是所有的也不是最终的。我们计划开发更多的更复杂的缓存策略，以及更完整更有效的内存表的实现，但是现有的克隆的JDBC适配器像我们展示了有哪些功能我们可以用，并允许我们根据这些功能做出自己的尝试开发。
+
+### 更多的主题
+
+有很多你的其他的方式来扩展Calcite而不仅仅是在这节中所介绍的这些方法。[adapter specification](http://calcite.apache.org/docs/adapter.html) 介绍了包含的APIs。
