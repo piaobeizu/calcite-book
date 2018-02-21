@@ -156,3 +156,143 @@ final RelNode result = builder
 
 
 
+### API摘要
+
+#### 关系运算符
+
+下面的方法会创建一个关系表达式([RelNode](http://calcite.apache.org/apidocs/org/apache/calcite/rel/RelNode.html))，并且把这个表达式放进栈中，然后返回`RelBuilder`
+
+| method                                                       | description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `scan(tableName)`                                            | Creates a [TableScan](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/TableScan.html). |
+| `values(fieldNames, value...)`   `values(rowType, tupleList)` | Creates a [Values](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Values.html). |
+| `filter(expr...)` `filter(exprList)`                         | Creates a [Filter](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Filter.html) over the AND of the given predicates. |
+| `project(expr...)` `project(exprList [, fieldNames])`        | Creates a [Project](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Project.html). To override the default name, wrap expressions using `alias`, or specify the `fieldNames` argument. |
+| `permute(mapping)`                                           | Creates a [Project](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Project.html) that permutes the fields using `mapping`. |
+| `convert(rowType [, rename])`                                | Creates a [Project](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Project.html) that converts the fields to the given types, optionally also renaming them. |
+| `aggregate(groupKey, aggCall...)` `aggregate(groupKey, aggCallList)` | Creates an [Aggregate](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Aggregate.html). |
+| `distinct()`                                                 | Creates an [Aggregate](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Aggregate.html) that eliminates duplicate records. |
+| `sort(fieldOrdinal...)` `sort(expr...)` `sort(exprList)`     | Creates a [Sort](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Sort.html).In the first form, field ordinals are 0-based, and a negative ordinal indicates descending; for example, -2 means field 1 descending.In the other forms, you can wrap expressions in `as`, `nullsFirst` or `nullsLast`. |
+| `sortLimit(offset, fetch, expr...)` `sortLimit(offset, fetch, exprList)` | Creates a [Sort](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Sort.html) with offset and limit. |
+| `limit(offset, fetch)`                                       | Creates a [Sort](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Sort.html) that does not sort, only applies with offset and limit. |
+| `join(joinType, expr...)` `join(joinType, exprList)` `join(joinType, fieldName...)` | Creates a [Join](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Join.html) of the two most recent relational expressions.The first form joins on a boolean expression (multiple conditions are combined using AND).The last form joins on named fields; each side must have a field of each name. |
+| `semiJoin(expr)`                                             | Creates a [SemiJoin](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/SemiJoin.html) of the two most recent relational expressions. |
+| `union(all [, n])`                                           | Creates a [Union](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Union.html) of the `n` (default two) most recent relational expressions. |
+| `intersect(all [, n])`                                       | Creates an [Intersect](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Intersect.html) of the `n` (default two) most recent relational expressions. |
+| `minus(all)`                                                 | Creates a [Minus](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Minus.html) of the two most recent relational expressions. |
+| `match(pattern, strictStart,` `strictEnd, patterns, measures,` `after, subsets, allRows,` `partitionKeys, orderKeys,` `interval)` | Creates a [Match](http://calcite.apache.org/apidocs/org/apache/calcite/rel/core/Match.html). |
+
+Argument types:
+
+- `expr`, `interval` [RexNode](http://calcite.apache.org/apidocs/org/apache/calcite/rex/RexNode.html)
+- `expr...` Array of [RexNode](http://calcite.apache.org/apidocs/org/apache/calcite/rex/RexNode.html)
+- `exprList`, `measureList`, `partitionKeys`, `orderKeys` Iterable of[RexNode](http://calcite.apache.org/apidocs/org/apache/calcite/rex/RexNode.html)
+- `fieldOrdinal` Ordinal of a field within its row (starting from 0)
+- `fieldName` Name of a field, unique within its row
+- `fieldName...` Array of String
+- `fieldNames` Iterable of String
+- `rowType` [RelDataType](http://calcite.apache.org/apidocs/org/apache/calcite/rel/type/RelDataType.html)
+- `groupKey` [RelBuilder.GroupKey](http://calcite.apache.org/apidocs/org/apache/calcite/tools/RelBuilder.GroupKey.html)
+- `aggCall...` Array of [RelBuilder.AggCall](http://calcite.apache.org/apidocs/org/apache/calcite/tools/RelBuilder.AggCall.html)
+- `aggCallList` Iterable of [RelBuilder.AggCall](http://calcite.apache.org/apidocs/org/apache/calcite/tools/RelBuilder.AggCall.html)
+- `value...` Array of Object
+- `value` Object
+- `tupleList` Iterable of List of [RexLiteral](http://calcite.apache.org/apidocs/org/apache/calcite/rex/RexLiteral.html)
+- `all`, `distinct`, `strictStart`, `strictEnd`, `allRows` boolean
+- `alias` String
+- `varHolder` [Holder](http://calcite.apache.org/apidocs/org/apache/calcite/util/Holder.html) of [RexCorrelVariable](http://calcite.apache.org/apidocs/org/apache/calcite/rex/RexCorrelVariable.html)
+- `patterns` Map whose key is String, value is [RexNode](http://calcite.apache.org/apidocs/org/apache/calcite/rex/RexNode.html)
+- `subsets` Map whose key is String, value is a sorted set of String
+
+构建器的方法执行各种不同的优化，包括以下优化:
+
+- `project` 如果要求按顺序隐射所有列，则返回其输入
+- `filter `使条件变平（所以`AND`和`OR`可以有两个以上的孩子），简化（将`x = 1`和TRUE转换为`x = 1`
+- 如果你使用了 `sort` 然后 `limit`, 结果就和 `sortLimit`一样
+
+有一些注释方法可将信息添加到堆栈顶部的关系表达式：
+
+| Method                | Description                                                  |
+| --------------------- | ------------------------------------------------------------ |
+| `as(alias)`           | Assigns a table alias to the top relational expression on the stack |
+| `variable(varHolder)` | Creates a correlation variable referencing the top relational expression |
+
+#### 堆栈方法
+
+| Method                | Description                                                  |
+| --------------------- | ------------------------------------------------------------ |
+| `build()`             | Pops the most recently created relational expression off the stack |
+| `push(rel)`           | Pushes a relational expression onto the stack. Relational methods such as `scan`, above, call this method, but user code generally does not |
+| `pushAll(collection)` | Pushes a collection of relational expressions onto the stack |
+| `peek()`              | Returns the relational expression most recently put onto the stack, but does not remove it |
+
+##### Scalar expression methods
+
+下面的方法会返回一些标量表达式([RexNode](http://calcite.apache.org/apidocs/org/apache/calcite/rex/RexNode.html)).这些方法中有很多可能都会用到栈中的内容。例如，`field("DEPTNO")`会返回刚刚添加到栈中的关系表达式中的“DEPTNO”列的引用。
+
+| Method                                                       | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `literal(value)`                                             | Constant                                                     |
+| `field(fieldName)`                                           | Reference, by name, to a field of the top-most relational expression |
+| `field(fieldOrdinal)`                                        | Reference, by ordinal, to a field of the top-most relational expression |
+| `field(inputCount, inputOrdinal, fieldName)`                 | Reference, by name, to a field of the (`inputCount` - `inputOrdinal`)th relational expression |
+| `field(inputCount, inputOrdinal, fieldOrdinal)`              | Reference, by ordinal, to a field of the (`inputCount` - `inputOrdinal`)th relational expression |
+| `field(inputCount, alias, fieldName)`                        | Reference, by table alias and field name, to a field at most `inputCount - 1` elements from the top of the stack |
+| `field(alias, fieldName)`                                    | Reference, by table alias and field name, to a field of the top-most relational expressions |
+| `field(expr, fieldName)`                                     | Reference, by name, to a field of a record-valued expression |
+| `field(expr, fieldOrdinal)`                                  | Reference, by ordinal, to a field of a record-valued expression |
+| `fields(fieldOrdinalList)`                                   | List of expressions referencing input fields by ordinal      |
+| `fields(mapping)`                                            | List of expressions referencing input fields by a given mapping |
+| `fields(collation)`                                          | List of expressions, `exprList`, such that `sort(exprList)` would replicate collation |
+| `call(op, expr...)` `call(op, exprList)`                     | Call to a function or operator                               |
+| `and(expr...)` `and(exprList)`                               | Logical AND. Flattens nested ANDs, and optimizes cases involving TRUE and FALSE. |
+| `or(expr...)` `or(exprList)`                                 | Logical OR. Flattens nested ORs, and optimizes cases involving TRUE and FALSE. |
+| `not(expr)`                                                  | Logical NOT                                                  |
+| `equals(expr, expr)`                                         | Equals                                                       |
+| `isNull(expr)`                                               | Checks whether an expression is null                         |
+| `isNotNull(expr)`                                            | Checks whether an expression is not null                     |
+| `alias(expr, fieldName)`                                     | Renames an expression (only valid as an argument to `project`) |
+| `cast(expr, typeName)` `cast(expr, typeName, precision)` `cast(expr, typeName, precision, scale)` | Converts an expression to a given type                       |
+| `desc(expr)`                                                 | Changes sort direction to descending (only valid as an argument to `sort` or `sortLimit`) |
+| `nullsFirst(expr)`                                           | Changes sort order to nulls first (only valid as an argument to `sort` or `sortLimit`) |
+| `nullsLast(expr)`                                            | Changes sort order to nulls last (only valid as an argument to `sort` or `sortLimit`) |
+
+##### 模式方法
+
+下面的方法将会返回用于`match`的模式。
+
+| Method                               | Description           |
+| ------------------------------------ | --------------------- |
+| `patternConcat(pattern...)`          | Concatenates patterns |
+| `patternAlter(pattern...)`           | Alternates patterns   |
+| `patternQuantify(pattern, min, max)` | Quantifies a pattern  |
+| `patternPermute(pattern...)`         | Permutes a pattern    |
+| `patternExclude(pattern)`            | Excludes a pattern    |
+
+#### 组键方法
+
+下面的方法将会返回一个[RelBuilder.GroupKey](http://calcite.apache.org/apidocs/org/apache/calcite/tools/RelBuilder.GroupKey.html).
+
+| Method                                                       | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `groupKey(fieldName...)` `groupKey(fieldOrdinal...)` `groupKey(expr...)` `groupKey(exprList)` | Creates a group key of the given expressions                 |
+| `groupKey(exprList, exprListList)`                           | Creates a group key of the given expressions with grouping sets |
+| `groupKey(bitSet, bitSets)`                                  | Creates a group key of the given input columns with grouping sets |
+
+#### 聚合调用的方法
+
+下面的方法将会返回一个[RelBuilder.AggCall](http://calcite.apache.org/apidocs/org/apache/calcite/tools/RelBuilder.AggCall.html).
+
+| Method                                                       | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `aggregateCall(op, distinct, approximate, filter, alias, expr...)` `aggregateCall(op, distinct, approximate, filter, alias, exprList)` | Creates a call to a given aggregate function, with an optional filter expression |
+| `count(distinct, alias, expr...)`                            | Creates a call to the COUNT aggregate function               |
+| `countStar(alias)`                                           | Creates a call to the COUNT(*) aggregate function            |
+| `sum(distinct, alias, expr)`                                 | Creates a call to the SUM aggregate function                 |
+| `min(alias, expr)`                                           | Creates a call to the MIN aggregate function                 |
+| `max(alias, expr)`                                           | Creates a call to the MAX aggregate function                 |
+
+
+
+
+
